@@ -1,9 +1,14 @@
-// ft-ingredientes.js — v3.0  Feature 2: histórico de preços
-import { salvar, carregar, remover } from './ft-storage.js';
+// ft-ingredientes.js — v3.1
+// Fix: inputs numéricos pré-preenchidos com n2input() (BR format, comma decimal)
+//      Máscaras de entrada: dot→comma, apenas dígitos+vírgula
+//      Cálculo custo unitário inicia automaticamente ao abrir (com valores corretos)
+import { salvar, carregar, remover }          from './ft-storage.js';
 import { calcCustoUnitario, calcVariacaoPreco } from './ft-calc.js';
-import { formatCurrency, formatQtdUnid, formatDataCurta, generateId, parseNum, UNIDADE_LABEL } from './ft-format.js';
-import { toast, abrirModal, fecharModal, confirmar, renderEmpty, renderTutorial } from './ft-ui.js';
-import { ico } from './ft-icons.js';
+import { formatCurrency, formatQtdUnid, formatDataCurta,
+         generateId, parseNum, n2input, UNIDADE_LABEL } from './ft-format.js';
+import { toast, abrirModal, fecharModal, confirmar,
+         renderEmpty, renderTutorial }         from './ft-ui.js';
+import { ico }                                 from './ft-icons.js';
 
 const COL = 'ingredientes';
 let _ings = [];
@@ -12,7 +17,7 @@ export async function initIngredientes() { _ings = await carregar(COL); }
 export function getIngredientes()        { return _ings; }
 export function getIngredienteById(id)   { return _ings.find(i => i.id === id) || null; }
 
-// ── Histórico de preços (localStorage, max 5 entradas) ────────────
+// ── Histórico de preços (localStorage, max 5 entradas) ─────────
 function _getHist(id) {
     try { return JSON.parse(localStorage.getItem('ft_ph_' + id) || '[]'); } catch { return []; }
 }
@@ -28,7 +33,69 @@ function _registrarPreco(id, preco) {
     }
 }
 
-// ── Tutorial ──────────────────────────────────────────────────────
+// ── Máscaras de entrada ─────────────────────────────────────────
+// Máscara decimal: só dígitos + uma vírgula · dot → vírgula
+function _maskDecimal(inp) {
+    inp.addEventListener('keydown', e => {
+        if (e.key === '.') {
+            e.preventDefault();
+            const pos = inp.selectionStart;
+            const val = inp.value;
+            // só insere vírgula se ainda não tiver uma
+            if (!val.includes(',')) {
+                inp.value = val.slice(0, pos) + ',' + val.slice(inp.selectionEnd);
+                inp.setSelectionRange(pos + 1, pos + 1);
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+    });
+    inp.addEventListener('input', () => {
+        let v = inp.value.replace(/[^\d,]/g, '');
+        // mantém apenas a primeira vírgula
+        const ci = v.indexOf(',');
+        if (ci !== -1) v = v.slice(0, ci + 1) + v.slice(ci + 1).replace(/,/g, '');
+        if (inp.value !== v) {
+            const pos = inp.selectionStart - (inp.value.length - v.length);
+            inp.value = v;
+            inp.setSelectionRange(Math.max(0, pos), Math.max(0, pos));
+        }
+    });
+}
+
+// Máscara monetária: dot→comma ao digitar, formata 2 casas no blur
+// UX: "35,5" → ao sair do campo → "35,50" ✓  |  "35.50" → "35,50" ✓
+function _maskCurrency(inp) {
+    inp.addEventListener('keydown', e => {
+        if (e.key === '.') {
+            e.preventDefault();
+            const pos = inp.selectionStart, val = inp.value;
+            if (!val.includes(',')) {
+                inp.value = val.slice(0, pos) + ',' + val.slice(inp.selectionEnd);
+                inp.setSelectionRange(pos + 1, pos + 1);
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+    });
+    inp.addEventListener('input', () => {
+        let v = inp.value.replace(/[^\d,]/g, '');
+        const ci = v.indexOf(',');
+        if (ci !== -1) {
+            const dec = v.slice(ci + 1).replace(/,/g, '').slice(0, 2);
+            v = v.slice(0, ci + 1) + dec;
+        }
+        if (inp.value !== v) inp.value = v;
+    });
+    // On blur: completa zeros decimais (ex: "35" → "35,00", "35,5" → "35,50")
+    inp.addEventListener('blur', () => {
+        const v = inp.value.trim();
+        if (!v) return;
+        if (!v.includes(',')) { inp.value = v + ',00'; return; }
+        const parts = v.split(',');
+        inp.value = parts[0] + ',' + (parts[1] || '').padEnd(2, '0').slice(0, 2);
+    });
+}
+
+// ── Tutorial ──────────────────────────────────────────────────
 function _tut() {
     renderTutorial('ft-sec-ing', 'ing', ico.ingredients, 'Cadastro de ingredientes', [
         'Toque em <strong>+</strong> para adicionar um ingrediente.',
@@ -38,7 +105,7 @@ function _tut() {
     ]);
 }
 
-// ── Lista ─────────────────────────────────────────────────────────
+// ── Lista ─────────────────────────────────────────────────────
 export function renderIngredientes(busca = '') {
     const wrap = document.getElementById('ft-lista-ing');
     if (!wrap) return;
@@ -90,11 +157,11 @@ function _trendBadge(precoAtual, hist) {
     const ant = hist[hist.length - 2].preco;
     const v   = calcVariacaoPreco(precoAtual, ant);
     if (Math.abs(v) < 0.01) return '';
-    const up  = v > 0;
+    const up = v > 0;
     return ` <span class="ft-trend ${up ? 'up' : 'dn'}">${up ? ico.trendUp : ico.trendDn}${Math.abs(v).toFixed(1)}%</span>`;
 }
 
-// ── Formulário (síncrono — sem await) ────────────────────────────
+// ── Formulário (síncrono, sem await) ──────────────────────────
 export function abrirFormIngrediente(id = null) {
     const ing  = id ? getIngredienteById(id) : null;
     const hist = id ? _getHist(id) : [];
@@ -103,7 +170,7 @@ export function abrirFormIngrediente(id = null) {
         `<option value="${u}"${ing?.unidade === u ? ' selected' : ''}>${UNIDADE_LABEL[u]}</option>`
     ).join('');
 
-    // Histórico
+    // Histórico de preços
     const histHtml = hist.length > 1 ? `
         <div class="ft-field">
             <label>${ico.history} Histórico de preços</label>
@@ -122,6 +189,10 @@ export function abrirFormIngrediente(id = null) {
                 }).join('')}
             </div>
         </div>` : '';
+
+    // Fix: n2input() para pré-preenchimento — evita bug "2.5" → parseNum = 25
+    const qtdVal   = n2input(ing?.quantidade_embalagem);          // ex: 2,5  ou  1.000
+    const precoVal = n2input(ing?.preco_compra, 2, 2);            // ex: 35,00
 
     const html = `
         <div class="ft-mhd">
@@ -146,18 +217,18 @@ export function abrirFormIngrediente(id = null) {
                 </div>
                 <div class="ft-field">
                     <label for="ft-ing-qtd">Qtd. embalagem</label>
-                    <input id="ft-ing-qtd" class="ft-input" type="number"
-                        placeholder="Ex: 1000" value="${ing?.quantidade_embalagem || ''}"
-                        min="0.001" step="any" inputmode="decimal">
+                    <input id="ft-ing-qtd" class="ft-input" type="text"
+                        placeholder="Ex: 1.000" value="${_esc(qtdVal)}"
+                        inputmode="decimal" autocomplete="off">
                 </div>
             </div>
             <div class="ft-field">
                 <label for="ft-ing-preco">Preço de compra</label>
                 <div class="ft-input-pre-wrap">
                     <span class="ft-input-pre">R$</span>
-                    <input id="ft-ing-preco" class="ft-input has-pre" type="number"
-                        placeholder="0,00" value="${ing?.preco_compra || ''}"
-                        min="0" step="0.01" inputmode="decimal">
+                    <input id="ft-ing-preco" class="ft-input has-pre" type="text"
+                        placeholder="0,00" value="${_esc(precoVal)}"
+                        inputmode="decimal" autocomplete="off">
                 </div>
             </div>
             <div class="ft-calc-preview" id="ft-ing-prev">
@@ -172,12 +243,16 @@ export function abrirFormIngrediente(id = null) {
             </button>
         </div>`;
 
-    // SÍNCRONO — sem await
+    // SÍNCRONO — DOM existe imediatamente após abrirModal
     const done = abrirModal(html);
 
     const pEl = document.getElementById('ft-ing-preco');
     const qEl = document.getElementById('ft-ing-qtd');
     const uEl = document.getElementById('ft-ing-unid');
+
+    // Aplica máscaras
+    if (qEl) _maskDecimal(qEl);
+    if (pEl) _maskCurrency(pEl);
 
     function _prev() {
         const p = parseNum(pEl?.value), q = parseNum(qEl?.value), u = uEl?.value || 'g';
@@ -191,7 +266,9 @@ export function abrirFormIngrediente(id = null) {
             bx?.classList.remove('active');
         }
     }
+
     [pEl, qEl, uEl].forEach(e => e?.addEventListener('input', _prev));
+    // Fix: executa imediatamente — custo unitário aparece ao abrir o formulário
     _prev();
 
     document.getElementById('_iClose')?.addEventListener('click', () => fecharModal(null), { once: true });
@@ -206,9 +283,9 @@ async function _save(id) {
     const qtd   = parseNum(document.getElementById('ft-ing-qtd')?.value);
     const preco = parseNum(document.getElementById('ft-ing-preco')?.value);
 
-    if (!nome)    { _err('ft-ing-nome',  'Informe o nome.');             return; }
-    if (qtd <= 0) { _err('ft-ing-qtd',   'Informe a quantidade.');       return; }
-    if (preco<=0) { _err('ft-ing-preco', 'Informe o preço de compra.');  return; }
+    if (!nome)    { _err('ft-ing-nome',  'Informe o nome.');              return; }
+    if (qtd <= 0) { _err('ft-ing-qtd',   'Informe a quantidade.');        return; }
+    if (preco<=0) { _err('ft-ing-preco', 'Informe o preço de compra.');   return; }
 
     if (!id) {
         const dup = _ings.find(i => i.nome.toLowerCase() === nome.toLowerCase());
@@ -221,7 +298,7 @@ async function _save(id) {
         custo_unitario: calcCustoUnitario(preco, qtd), criadoEm: Date.now(),
     };
 
-    _registrarPreco(obj.id, preco); // feat 2
+    _registrarPreco(obj.id, preco);
 
     const btn = document.getElementById('_iSave');
     if (btn) { btn.disabled = true; btn.lastElementChild.textContent = 'Salvando…'; }
@@ -253,7 +330,7 @@ async function _del(id) {
     document.dispatchEvent(new CustomEvent('ft:ings-changed'));
 }
 
-// ── Picker (modal-2) ──────────────────────────────────────────────
+// ── Picker (modal-2) ──────────────────────────────────────────
 export function abrirPickerIngrediente(jaAdicionados = []) {
     const disp = [..._ings]
         .filter(i => !jaAdicionados.includes(i.id))
@@ -284,8 +361,8 @@ export function abrirPickerIngrediente(jaAdicionados = []) {
             <div class="ft-field">
                 <label for="ft-pk-qtd">Quantidade por pizza</label>
                 <div class="ft-input-suf-wrap">
-                    <input id="ft-pk-qtd" class="ft-input has-suf" type="number"
-                        placeholder="Ex: 120" min="0.001" step="any" inputmode="decimal">
+                    <input id="ft-pk-qtd" class="ft-input has-suf" type="text"
+                        placeholder="Ex: 120" inputmode="decimal" autocomplete="off">
                     <span class="ft-input-suf" id="ft-pk-unid">—</span>
                 </div>
                 <span class="ft-field-hint">Ex.: 120 (g) · 0,05 (kg) · 2 (uni)</span>
@@ -314,6 +391,9 @@ export function abrirPickerIngrediente(jaAdicionados = []) {
     const unidEl = document.getElementById('ft-pk-unid');
     const valEl  = document.getElementById('ft-pk-val');
     const prevBx = document.getElementById('ft-pk-prev');
+
+    // Aplica máscara decimal ao campo de quantidade do picker
+    if (qtdEl) _maskDecimal(qtdEl);
 
     const _upd = () => {
         const ing = disp.find(i => i.id === selEl?.value);
