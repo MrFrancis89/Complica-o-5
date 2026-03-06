@@ -1,22 +1,25 @@
-// ft-receitas.js — v3.0
+// ft-receitas.js — v3.1
 // Feat 1: edição inline de quantidade  Feat 3: favoritos/ativo
 // Feat 5: clone de receita             Feat 6: filtro por tamanho
-import { salvar, carregar, remover } from './ft-storage.js';
+// Fix: inputs inline com n2input() + máscara decimal (bug ponto → parseNum = errado)
+import { salvar, carregar, remover }   from './ft-storage.js';
 import { calcCustoIngrediente, calcCustoReceita } from './ft-calc.js';
-import { formatCurrency, formatQtdUnid, generateId, parseNum, TAMANHO_LABEL, PORCOES_PADRAO } from './ft-format.js';
-import { toast, abrirModal, fecharModal, confirmar, renderEmpty, renderTutorial } from './ft-ui.js';
-import { abrirPickerIngrediente } from './ft-ingredientes.js';
-import { ico } from './ft-icons.js';
+import { formatCurrency, formatQtdUnid, generateId,
+         parseNum, n2input, TAMANHO_LABEL, PORCOES_PADRAO } from './ft-format.js';
+import { toast, abrirModal, fecharModal, confirmar,
+         renderEmpty, renderTutorial }  from './ft-ui.js';
+import { abrirPickerIngrediente }       from './ft-ingredientes.js';
+import { ico }                          from './ft-icons.js';
 
-const COL    = 'receitas';
-let _recs    = [];
+const COL     = 'receitas';
+let _recs     = [];
 let _editList = [];
 let _filtroTam = '';
 
-export async function initReceitas() { _recs = await carregar(COL); }
-export function getReceitas()         { return _recs; }
-export function getReceitasAtivas()   { return _recs.filter(r => r.ativo !== false); }
-export function getReceitaById(id)    { return _recs.find(r => r.id === id) || null; }
+export async function initReceitas()   { _recs = await carregar(COL); }
+export function getReceitas()          { return _recs; }
+export function getReceitasAtivas()    { return _recs.filter(r => r.ativo !== false); }
+export function getReceitaById(id)     { return _recs.find(r => r.id === id) || null; }
 
 function _tut() {
     renderTutorial('ft-sec-rec', 'rec', ico.recipes, 'Como criar receitas', [
@@ -111,7 +114,7 @@ export function renderReceitas(busca = '') {
     }));
 }
 
-// ── Formulário (síncrono) ─────────────────────────────────────────
+// ── Formulário (síncrono) ────────────────────────────────────
 export function abrirFormReceita(id = null, clonarDeId = null) {
     const base     = id ? getReceitaById(id) : clonarDeId ? getReceitaById(clonarDeId) : null;
     const clonando = !id && !!clonarDeId;
@@ -199,6 +202,28 @@ export function abrirFormReceita(id = null, clonarDeId = null) {
     return done;
 }
 
+// Máscara decimal (local — mesma lógica de ft-ingredientes)
+function _maskDecimal(inp) {
+    inp.addEventListener('keydown', e => {
+        if (e.key === '.') {
+            e.preventDefault();
+            const pos = inp.selectionStart;
+            const val = inp.value;
+            if (!val.includes(',')) {
+                inp.value = val.slice(0, pos) + ',' + val.slice(inp.selectionEnd);
+                inp.setSelectionRange(pos + 1, pos + 1);
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+    });
+    inp.addEventListener('input', () => {
+        let v = inp.value.replace(/[^\d,]/g, '');
+        const ci = v.indexOf(',');
+        if (ci !== -1) v = v.slice(0, ci + 1) + v.slice(ci + 1).replace(/,/g, '');
+        if (inp.value !== v) inp.value = v;
+    });
+}
+
 function _renderEdList() {
     const wrap = document.getElementById('ft-rec-ings');
     if (!wrap) return;
@@ -207,28 +232,33 @@ function _renderEdList() {
         wrap.innerHTML = `<div class="ft-ings-empty">${ico.ingredients}
             <span>Nenhum ingrediente. Toque em <strong>+ Adicionar</strong>.</span></div>`;
     } else {
-        wrap.innerHTML = `<div class="ft-ings-list">${_editList.map((ing, idx) => `
+        wrap.innerHTML = `<div class="ft-ings-list">${_editList.map((ing, idx) => {
+            // Fix: n2input() para exibir quantidade com vírgula BR (evita bug do ponto)
+            const qtdStr = n2input(ing.quantidade);
+            return `
             <div class="ft-ing-row">
                 <span class="ft-ing-row-ico">${ico.ingredients}</span>
                 <span class="ft-ing-row-body">
                     <span class="ft-ing-row-name">${_esc(ing.nome)}</span>
                     <span class="ft-ing-inline-wrap">
-                        <input class="ft-ing-inline-qtd ft-input" type="number"
-                            value="${ing.quantidade}" min="0.001" step="any"
-                            inputmode="decimal" data-idx="${idx}" aria-label="Quantidade">
+                        <input class="ft-ing-inline-qtd ft-input" type="text"
+                            value="${_esc(qtdStr)}" inputmode="decimal"
+                            data-idx="${idx}" aria-label="Quantidade" autocomplete="off">
                         <span class="ft-ing-row-unit">${ing.unidade}</span>
                     </span>
                 </span>
                 <span class="ft-ing-row-cost" id="_ircost_${idx}">${formatCurrency(ing.custo)}</span>
                 <button class="ft-ing-row-rm" data-idx="${idx}" aria-label="Remover">${ico.close}</button>
-            </div>`).join('')}</div>`;
+            </div>`; }).join('')}</div>`;
 
-        // Feat 1: edição inline de quantidade
-        wrap.querySelectorAll('.ft-ing-inline-qtd').forEach(inp =>
+        // Feat 1: edição inline — aplica máscara + recalcula custo
+        wrap.querySelectorAll('.ft-ing-inline-qtd').forEach(inp => {
+            _maskDecimal(inp);
             inp.addEventListener('input', () => {
-                const idx    = parseInt(inp.dataset.idx);
+                const idx     = parseInt(inp.dataset.idx);
                 const novaQtd = parseNum(inp.value);
                 if (novaQtd <= 0 || !_editList[idx]) return;
+                // Calcula custo unitário a partir do custo anterior (preserva margem)
                 const cuPorQtd = _editList[idx].quantidade > 0
                     ? _editList[idx].custo / _editList[idx].quantidade : 0;
                 _editList[idx].quantidade = novaQtd;
@@ -236,7 +266,8 @@ function _renderEdList() {
                 const costEl = document.getElementById(`_ircost_${idx}`);
                 if (costEl) costEl.textContent = formatCurrency(_editList[idx].custo);
                 _updateCustoTotal();
-            }));
+            });
+        });
 
         wrap.querySelectorAll('.ft-ing-row-rm').forEach(b =>
             b.addEventListener('click', () => { _editList.splice(parseInt(b.dataset.idx), 1); _renderEdList(); }));
