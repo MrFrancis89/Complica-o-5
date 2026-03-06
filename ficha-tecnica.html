@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#000000">
+  <title>Ficha Técnica</title>
+  <link rel="stylesheet" href="./ft-style.css">
+
+  <!--
+  ═══════════════════════════════════════════════════════════════
+  FIREBASE — descomente as 3 linhas abaixo para ativar:
+  1. Acesse https://console.firebase.google.com
+  2. Crie ou use um projeto existente
+  3. Ative Firestore + Authentication > Anônimo
+  4. Copie o firebaseConfig e cole em ft-firebase.js
+  ═══════════════════════════════════════════════════════════════
+  -->
+  <!--
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  -->
+
+  <style>
+    /*
+     * PATCH — v2.1 Preparo Antecipado
+     * Ajuste da nav inferior para 6 abas (era 5).
+     * Cada botão fica levemente mais estreito, mas mantém usabilidade
+     * dentro das diretrizes Apple HIG (min 44pt de área de toque).
+     */
+    #ft-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .ft-nav-btn { min-width: 52px; }
+
+    /* ── Aba "pre": ícone em amarelo gold ──────────────────────────── */
+    .ft-nav-btn[data-tab="pre"].active { color: #ffd60a; }
+    .ft-nav-btn[data-tab="pre"].active svg { stroke: #ffd60a; }
+  </style>
+</head>
+<body>
+
+<!-- ══════ Loading ══════ -->
+<div id="ft-loading" style="display:flex">
+  <div class="ft-loading-icon">🍕</div>
+  <div class="ft-loading-text">Carregando Ficha Técnica…</div>
+</div>
+
+<!-- ══════ App ══════ -->
+<div id="ft-app" class="hidden">
+
+  <!-- Header -->
+  <header id="ft-hdr">
+    <div class="ft-hdr-title">Ficha <span>Técnica</span></div>
+    <div class="ft-hdr-right">
+      <button id="ft-sync-btn" title="Status de sincronização" aria-label="Sincronizar dados"></button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main id="ft-main">
+
+    <!-- ── Ingredientes ── -->
+    <section id="ft-sec-ing" class="ft-section">
+      <div class="ft-search-wrap">
+        <input id="ft-busca-ing" class="ft-search" type="search"
+          placeholder="Buscar ingredientes…" autocomplete="off" autocorrect="off">
+      </div>
+      <div id="ft-lista-ing"></div>
+    </section>
+
+    <!-- ── Receitas ── -->
+    <section id="ft-sec-rec" class="ft-section">
+      <div class="ft-search-wrap">
+        <input id="ft-busca-rec" class="ft-search" type="search"
+          placeholder="Buscar receitas…" autocomplete="off" autocorrect="off">
+      </div>
+      <div id="ft-lista-rec"></div>
+    </section>
+
+    <!-- ── Simulador ── -->
+    <section id="ft-sec-sim" class="ft-section">
+      <div id="ft-simulador"></div>
+    </section>
+
+    <!-- ── Dashboard ── -->
+    <section id="ft-sec-dash" class="ft-section">
+      <div id="ft-dashboard"></div>
+    </section>
+
+    <!-- ── Exportação ── -->
+    <section id="ft-sec-exp" class="ft-section">
+      <div id="ft-exportacao"></div>
+    </section>
+
+    <!-- ══ Preparo Antecipado — v2.1 ══════════════════════════════ -->
+    <section id="ft-sec-pre" class="ft-section">
+      <div class="ft-search-wrap">
+        <input id="ft-busca-pre" class="ft-search" type="search"
+          placeholder="Buscar preparos…" autocomplete="off" autocorrect="off">
+      </div>
+      <div id="ft-preparo"></div>
+    </section>
+    <!-- ══════════════════════════════════════════════════════════════ -->
+
+  </main><!-- /ft-main -->
+
+  <!-- FAB -->
+  <button id="ft-fab" aria-label="Adicionar novo item" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/>
+      <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  </button>
+
+  <!-- Nav inferior (6 abas) -->
+  <nav id="ft-nav" role="navigation" aria-label="Navegação principal">
+
+    <!-- Ingredientes -->
+    <button class="ft-nav-btn" data-tab="ing" aria-label="Ingredientes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2C9 2 7 4.2 7 7c0 2 1.1 3.7 2.7 4.5V19a2.3 2.3 0 004.6 0v-7.5C15.9 10.7 17 9 17 7c0-2.8-2.2-5-5-5z"/>
+        <line x1="9.5" y1="11" x2="14.5" y2="11"/>
+      </svg>
+      <span>Ingredientes</span>
+    </button>
+
+    <!-- Receitas -->
+    <button class="ft-nav-btn" data-tab="rec" aria-label="Receitas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="8" y1="13" x2="16" y2="13"/>
+        <line x1="8" y1="17" x2="13" y2="17"/>
+      </svg>
+      <span>Receitas</span>
+    </button>
+
+    <!-- Simulador -->
+    <button class="ft-nav-btn" data-tab="sim" aria-label="Simulador">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="8" r="3.5"/>
+        <circle cx="16" cy="16" r="3.5"/>
+        <line x1="10.5" y1="10.5" x2="13.5" y2="13.5"/>
+      </svg>
+      <span>Simulador</span>
+    </button>
+
+    <!-- Preparo Antecipado — v2.1 -->
+    <button class="ft-nav-btn" data-tab="pre" aria-label="Preparo Antecipado">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Ícone: camadas empilhadas = lote / batch -->
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span>Preparo</span>
+    </button>
+
+    <!-- Dashboard -->
+    <button class="ft-nav-btn" data-tab="dash" aria-label="Dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="8" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="4" rx="1.5"/>
+        <rect x="14" y="11" width="7" height="10" rx="1.5"/>
+        <rect x="3" y="15" width="7" height="6" rx="1.5"/>
+      </svg>
+      <span>Dashboard</span>
+    </button>
+
+    <!-- Exportar -->
+    <button class="ft-nav-btn" data-tab="exp" aria-label="Exportar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <span>Exportar</span>
+    </button>
+
+  </nav>
+
+  <!-- Modal nível 1 -->
+  <div id="ft-modal" role="dialog" aria-modal="true">
+    <div id="ft-modal-box"></div>
+  </div>
+
+  <!-- Modal nível 2 (pickers nested) -->
+  <div id="ft-modal-2" role="dialog" aria-modal="true">
+    <div id="ft-modal-2-box"></div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="ft-toast" aria-live="polite" aria-atomic="true"></div>
+
+</div><!-- /ft-app -->
+
+<script type="module" src="./ft-app.js"></script>
+</body>
+</html>
