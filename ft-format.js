@@ -1,4 +1,5 @@
-// ft-format.js — v3.0
+// ft-format.js — v3.1
+// Fix: n2input() converte número JS para string BR (evita bug parseNum com ponto decimal)
 export function formatCurrency(n) {
     if (n == null || isNaN(n)) return 'R$ 0,00';
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -32,3 +33,18 @@ export function formatDataCurta(ts) {
 export const TAMANHO_LABEL = { P: 'P (25cm)', M: 'M (30cm)', G: 'G (35cm)', GG: 'GG (40cm)' };
 export const UNIDADE_LABEL = { g: 'g', kg: 'kg', ml: 'ml', l: 'L', uni: 'uni', pct: 'pct' };
 export const PORCOES_PADRAO = { P: 6, M: 8, G: 10, GG: 12 };
+
+/**
+ * Converte número JS → string BR para pré-preenchimento de inputs.
+ * Evita o bug de parseNum("2.5") → 25 (ponto confundido com sep. de milhar).
+ *   n2input(2.5)        → "2,5"
+ *   n2input(35, 2, 2)   → "35,00"
+ *   n2input(1000, 0, 0) → "1.000"
+ */
+export function n2input(n, minDec = 0, maxDec = 3) {
+    if (n == null || isNaN(Number(n)) || n === '') return '';
+    return Number(n).toLocaleString('pt-BR', {
+        minimumFractionDigits: minDec,
+        maximumFractionDigits: maxDec,
+    });
+}
