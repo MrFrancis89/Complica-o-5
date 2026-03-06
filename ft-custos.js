@@ -4,10 +4,38 @@
 import { getReceitasAtivas } from './ft-receitas.js';
 import { calcPrecoMarkup, calcPrecoMargem, calcLucro, calcMargemReal, calcMarkupImplicito,
          calcCustoEfetivo, calcCustoPorcao } from './ft-calc.js';
-import { formatCurrency, formatPercent, formatQtdUnid, parseNum, PORCOES_PADRAO } from './ft-format.js';
+import { formatCurrency, formatPercent, formatQtdUnid, parseNum, n2input, PORCOES_PADRAO } from './ft-format.js';
 import { toast, renderTutorial, debounce } from './ft-ui.js';
 import { carregarConfig, salvarConfig } from './ft-storage.js';
 import { ico } from './ft-icons.js';
+
+// Máscara decimal para inputs de config (dot→comma, blur formata 2 casas)
+function _maskDecimalConfig(inp) {
+    inp.addEventListener('keydown', e => {
+        if (e.key === '.') {
+            e.preventDefault();
+            const pos = inp.selectionStart, val = inp.value;
+            if (!val.includes(',')) {
+                inp.value = val.slice(0, pos) + ',' + val.slice(inp.selectionEnd);
+                inp.setSelectionRange(pos + 1, pos + 1);
+                inp.dispatchEvent(new Event('input'));
+            }
+        }
+    });
+    inp.addEventListener('input', () => {
+        let v = inp.value.replace(/[^\d,]/g, '');
+        const ci = v.indexOf(',');
+        if (ci !== -1) v = v.slice(0, ci + 1) + v.slice(ci + 1).replace(/,/g, '').slice(0, 2);
+        if (inp.value !== v) inp.value = v;
+    });
+    inp.addEventListener('blur', () => {
+        const v = inp.value.trim();
+        if (!v || v === ',') { inp.value = ''; return; }
+        if (!v.includes(',')) return; // inteiro — ok
+        const parts = v.split(',');
+        inp.value = parts[0] + ',' + (parts[1] || '').padEnd(2, '0').slice(0, 2);
+    });
+}
 
 let _cfg  = { markup: 200, margem: 40, overhead: 0, maoDeObra: 0, porcoes: 0 };
 let _modo = 'markup';   // 'markup' | 'margem' | 'comparar'
@@ -123,8 +151,8 @@ export function renderSimulador() {
                     <div class="ft-field">
                         <label for="ft-ovh">Overhead</label>
                         <div class="ft-input-suf-wrap">
-                            <input id="ft-ovh" class="ft-input has-suf" type="number"
-                                value="${_cfg.overhead}" min="0" max="200" step="1" inputmode="decimal">
+                            <input id="ft-ovh" class="ft-input has-suf" type="text"
+                                value="${n2input(_cfg.overhead)}" inputmode="decimal" autocomplete="off">
                             <span class="ft-input-suf">%</span>
                         </div>
                         <span class="ft-field-hint">Gás, energia, embalagem…</span>
@@ -133,8 +161,8 @@ export function renderSimulador() {
                         <label for="ft-mdo">Mão de obra</label>
                         <div class="ft-input-pre-wrap">
                             <span class="ft-input-pre">R$</span>
-                            <input id="ft-mdo" class="ft-input has-pre" type="number"
-                                value="${_cfg.maoDeObra}" min="0" step="0.50" inputmode="decimal">
+                            <input id="ft-mdo" class="ft-input has-pre" type="text"
+                                value="${n2input(_cfg.maoDeObra)}" inputmode="decimal" autocomplete="off">
                         </div>
                         <span class="ft-field-hint">Valor fixo por pizza.</span>
                     </div>
@@ -181,6 +209,11 @@ export function renderSimulador() {
 
     _bindPair('ft-mk-r', 'ft-mk-i');
     _bindPair('ft-mg-r', 'ft-mg-i');
+    // Aplica máscara decimal nos inputs de config (type=text)
+    const ovhEl = document.getElementById('ft-ovh');
+    const mdoEl = document.getElementById('ft-mdo');
+    if (ovhEl) _maskDecimalConfig(ovhEl);
+    if (mdoEl) _maskDecimalConfig(mdoEl);
     document.getElementById('ft-ovh')?.addEventListener('input', () => {
         _cfg.overhead  = parseNum(document.getElementById('ft-ovh')?.value);
         _calc();
@@ -327,8 +360,8 @@ function _renderComparar(recs) {
                 <div class="ft-field">
                     <label for="ft-cmp-mk">Markup para comparação</label>
                     <div class="ft-input-suf-wrap">
-                        <input id="ft-cmp-mk" class="ft-input has-suf" type="number"
-                            value="${_cfg.markup}" min="0" step="10" inputmode="decimal">
+                        <input id="ft-cmp-mk" class="ft-input has-suf" type="text"
+                            value="${n2input(_cfg.markup)}" inputmode="decimal" autocomplete="off">
                         <span class="ft-input-suf">%</span>
                     </div>
                 </div>
