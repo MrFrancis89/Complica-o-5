@@ -9,32 +9,15 @@
   <title>Ficha Técnica</title>
   <link rel="stylesheet" href="./ft-style.css">
 
-  <!--
-  ═══════════════════════════════════════════════════════════════
-  FIREBASE — descomente as 3 linhas abaixo para ativar:
-  1. Acesse https://console.firebase.google.com
-  2. Crie ou use um projeto existente
-  3. Ative Firestore + Authentication > Anônimo
-  4. Copie o firebaseConfig e cole em ft-firebase.js
-  ═══════════════════════════════════════════════════════════════
-  -->
-  <!--
+  <!-- Firebase SDK (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  -->
 
   <style>
-    /*
-     * PATCH — v2.1 Preparo Antecipado
-     * Ajuste da nav inferior para 6 abas (era 5).
-     * Cada botão fica levemente mais estreito, mas mantém usabilidade
-     * dentro das diretrizes Apple HIG (min 44pt de área de toque).
-     */
+    /* Nav inferior para 6 abas */
     #ft-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .ft-nav-btn { min-width: 52px; }
-
-    /* ── Aba "pre": ícone em amarelo gold ──────────────────────────── */
     .ft-nav-btn[data-tab="pre"].active { color: #ffd60a; }
     .ft-nav-btn[data-tab="pre"].active svg { stroke: #ffd60a; }
   </style>
@@ -47,6 +30,9 @@
   <div class="ft-loading-text">Carregando Ficha Técnica…</div>
 </div>
 
+<!-- ══════ Tela de Login ══════ -->
+<div id="ft-login" class="hidden"></div>
+
 <!-- ══════ App ══════ -->
 <div id="ft-app" class="hidden">
 
@@ -55,13 +41,14 @@
     <div class="ft-hdr-title">Ficha <span>Técnica</span></div>
     <div class="ft-hdr-right">
       <button id="ft-sync-btn" title="Status de sincronização" aria-label="Sincronizar dados"></button>
+      <button id="ft-user-btn" class="ft-user-btn" style="display:none" title="Perfil" aria-label="Perfil do usuário"></button>
     </div>
   </header>
 
   <!-- Main content -->
   <main id="ft-main">
 
-    <!-- ── Ingredientes ── -->
+    <!-- Ingredientes -->
     <section id="ft-sec-ing" class="ft-section">
       <div class="ft-search-wrap">
         <input id="ft-busca-ing" class="ft-search" type="search"
@@ -70,7 +57,7 @@
       <div id="ft-lista-ing"></div>
     </section>
 
-    <!-- ── Receitas ── -->
+    <!-- Receitas -->
     <section id="ft-sec-rec" class="ft-section">
       <div class="ft-search-wrap">
         <input id="ft-busca-rec" class="ft-search" type="search"
@@ -79,22 +66,22 @@
       <div id="ft-lista-rec"></div>
     </section>
 
-    <!-- ── Simulador ── -->
+    <!-- Simulador -->
     <section id="ft-sec-sim" class="ft-section">
       <div id="ft-simulador"></div>
     </section>
 
-    <!-- ── Dashboard ── -->
+    <!-- Dashboard -->
     <section id="ft-sec-dash" class="ft-section">
       <div id="ft-dashboard"></div>
     </section>
 
-    <!-- ── Exportação ── -->
+    <!-- Exportação -->
     <section id="ft-sec-exp" class="ft-section">
       <div id="ft-exportacao"></div>
     </section>
 
-    <!-- ══ Preparo Antecipado — v2.1 ══════════════════════════════ -->
+    <!-- Preparo Antecipado -->
     <section id="ft-sec-pre" class="ft-section">
       <div class="ft-search-wrap">
         <input id="ft-busca-pre" class="ft-search" type="search"
@@ -102,9 +89,8 @@
       </div>
       <div id="ft-preparo"></div>
     </section>
-    <!-- ══════════════════════════════════════════════════════════════ -->
 
-  </main><!-- /ft-main -->
+  </main>
 
   <!-- FAB -->
   <button id="ft-fab" aria-label="Adicionar novo item" style="display:none">
@@ -118,7 +104,6 @@
   <!-- Nav inferior (6 abas) -->
   <nav id="ft-nav" role="navigation" aria-label="Navegação principal">
 
-    <!-- Ingredientes -->
     <button class="ft-nav-btn" data-tab="ing" aria-label="Ingredientes">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2C9 2 7 4.2 7 7c0 2 1.1 3.7 2.7 4.5V19a2.3 2.3 0 004.6 0v-7.5C15.9 10.7 17 9 17 7c0-2.8-2.2-5-5-5z"/>
@@ -127,7 +112,6 @@
       <span>Ingredientes</span>
     </button>
 
-    <!-- Receitas -->
     <button class="ft-nav-btn" data-tab="rec" aria-label="Receitas">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -138,7 +122,6 @@
       <span>Receitas</span>
     </button>
 
-    <!-- Simulador -->
     <button class="ft-nav-btn" data-tab="sim" aria-label="Simulador">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="8" cy="8" r="3.5"/>
@@ -148,10 +131,8 @@
       <span>Simulador</span>
     </button>
 
-    <!-- Preparo Antecipado — v2.1 -->
     <button class="ft-nav-btn" data-tab="pre" aria-label="Preparo Antecipado">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-        <!-- Ícone: camadas empilhadas = lote / batch -->
         <path d="M12 2L2 7l10 5 10-5-10-5z"/>
         <path d="M2 17l10 5 10-5"/>
         <path d="M2 12l10 5 10-5"/>
@@ -159,7 +140,6 @@
       <span>Preparo</span>
     </button>
 
-    <!-- Dashboard -->
     <button class="ft-nav-btn" data-tab="dash" aria-label="Dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="8" rx="1.5"/>
@@ -170,7 +150,6 @@
       <span>Dashboard</span>
     </button>
 
-    <!-- Exportar -->
     <button class="ft-nav-btn" data-tab="exp" aria-label="Exportar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
@@ -187,12 +166,12 @@
     <div id="ft-modal-box"></div>
   </div>
 
-  <!-- Modal nível 2 (pickers nested) -->
+  <!-- Modal nível 2 (pickers) -->
   <div id="ft-modal-2" role="dialog" aria-modal="true">
     <div id="ft-modal-2-box"></div>
   </div>
 
-  <!-- Toast container -->
+  <!-- Toast -->
   <div id="ft-toast" aria-live="polite" aria-atomic="true"></div>
 
 </div><!-- /ft-app -->
