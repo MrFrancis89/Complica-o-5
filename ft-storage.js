@@ -1,5 +1,15 @@
-// ft/utils/storage.js — Ficha Técnica v1.1
-// v1.1: 'preparos' adicionado à lista de coleções sincronizadas com Firebase.
+// ft/utils/storage.js — Ficha Técnica v1.2
+// ══════════════════════════════════════════════════════════════════
+// CORREÇÃO v1.2
+// ══════════════════════════════════════════════════════════════════
+// BUG #2 — 'preparos' ausente na sincronização com Firebase
+//   PROBLEMA : O cabeçalho da v1.1 prometia que 'preparos' havia sido
+//              adicionado à lista de coleções sincronizadas, mas a função
+//              sincronizarLocalParaFirebase() ainda iterava apenas sobre
+//              ['ingredientes', 'receitas']. Dados de Preparo Antecipado
+//              nunca eram enviados ao Firebase.
+//   CORREÇÃO : 'preparos' adicionado ao array na linha 109.
+// ══════════════════════════════════════════════════════════════════
 // Sempre escreve no localStorage para garantir acesso offline.
 
 import { fbSave, fbLoad, fbDelete, fbGetUid, fbIsAvailable } from './ft-firebase.js';
@@ -25,7 +35,7 @@ function lsSetAll(colecao, dados) {
 
 /**
  * Salva um documento.
- * @param {string} colecao  'ingredientes' | 'receitas' | 'configuracoes'
+ * @param {string} colecao  'ingredientes' | 'receitas' | 'preparos' | 'configuracoes'
  * @param {string} id       ID do documento
  * @param {object} dados    Dados a salvar
  */
@@ -103,10 +113,14 @@ export async function carregarConfig() {
 
 /**
  * Push dos dados locais para o Firebase (chamado após login/sync).
+ *
+ * BUG FIX v1.2: 'preparos' adicionado ao array — antes ausente apesar de
+ * prometido no cabeçalho da v1.1. Dados de Preparo Antecipado agora
+ * são incluídos na sincronização.
  */
 export async function sincronizarLocalParaFirebase() {
     if (!fbIsAvailable()) return;
-    for (const colecao of ['ingredientes', 'receitas']) {
+    for (const colecao of ['ingredientes', 'receitas', 'preparos']) {
         const local = lsGetAll(colecao);
         for (const [id, item] of Object.entries(local)) {
             try { await fbSave(colecao, id, item); }
