@@ -2,13 +2,13 @@
 // ══════════════════════════════════════════════════════════════════
 // CORREÇÃO v1.2
 // ══════════════════════════════════════════════════════════════════
-// BUG #2 — 'preparos' ausente na sincronização com Firebase
+// BUG — 'preparos' ausente na sincronização com Firebase
 //   PROBLEMA : O cabeçalho da v1.1 prometia que 'preparos' havia sido
 //              adicionado à lista de coleções sincronizadas, mas a função
 //              sincronizarLocalParaFirebase() ainda iterava apenas sobre
 //              ['ingredientes', 'receitas']. Dados de Preparo Antecipado
 //              nunca eram enviados ao Firebase.
-//   CORREÇÃO : 'preparos' adicionado ao array na linha 109.
+//   CORREÇÃO : 'preparos' adicionado ao array de sincronização.
 // ══════════════════════════════════════════════════════════════════
 // Sempre escreve no localStorage para garantir acesso offline.
 
@@ -63,7 +63,6 @@ export async function carregar(colecao) {
     if (fbIsAvailable()) {
         try {
             const fbDados = await fbLoad(colecao);
-            // Sincroniza Firebase → localStorage
             const mapa = {};
             fbDados.forEach(d => { mapa[d.id] = d; });
             lsSetAll(colecao, mapa);
@@ -113,10 +112,8 @@ export async function carregarConfig() {
 
 /**
  * Push dos dados locais para o Firebase (chamado após login/sync).
- *
- * BUG FIX v1.2: 'preparos' adicionado ao array — antes ausente apesar de
- * prometido no cabeçalho da v1.1. Dados de Preparo Antecipado agora
- * são incluídos na sincronização.
+ * BUG FIX v1.2: 'preparos' adicionado — antes ausente apesar de
+ * prometido no cabeçalho da v1.1.
  */
 export async function sincronizarLocalParaFirebase() {
     if (!fbIsAvailable()) return;
