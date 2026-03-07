@@ -12,7 +12,7 @@
 // ══════════════════════════════════════════════════════════════════
 
 const FIREBASE_CONFIG = {
-    apiKey:            "SUA_API_KEY",
+    apiKey:            "AIzaSyCfpzmO9yAgf_gqzYyvwg9pqEPt2UGbHW8",
     authDomain:        "SEU_PROJETO.firebaseapp.com",
     projectId:         "SEU_PROJETO",
     storageBucket:     "SEU_PROJETO.appspot.com",
