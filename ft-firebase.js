@@ -1,4 +1,4 @@
-// ft-firebase.js — Ficha Técnica v1.1
+// ft-firebase.js — v2.0 — Google Sign-In
 // Projeto: stockflow-pro-72a67
 
 const FIREBASE_CONFIG = {
@@ -10,61 +10,88 @@ const FIREBASE_CONFIG = {
     appId:             "1:714550242199:web:d50d468dfbb1ee557332d2"
 };
 
-// ─────────────────────────────────────────────────────────────────
-// Não editar abaixo desta linha
-// ─────────────────────────────────────────────────────────────────
-
 let _db    = null;
 let _auth  = null;
 let _uid   = null;
+let _user  = null;
 let _ready = false;
-const _listeners = [];
+const _readyListeners = [];
 
 export function fbIsAvailable() { return _ready && !!_uid; }
 export function fbGetUid()      { return _uid; }
+export function fbGetUser()     { return _user; }
 
+/** Inicializa o SDK. NÃO faz login — só prepara o Firebase. */
 export async function initFirebase() {
     if (typeof firebase === 'undefined') {
-        console.warn('[firebase] SDK não carregado. Verifique os scripts em ficha-tecnica.html.');
+        console.warn('[firebase] SDK não carregado.');
         return false;
     }
     try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(FIREBASE_CONFIG);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
         _db   = firebase.firestore();
         _auth = firebase.auth();
-        await _ensureAuth();
-        _ready = true;
-        _listeners.forEach(fn => fn(true));
-        console.info(`[firebase] ✓ Conectado. UID: ${_uid}`);
+        console.info('[firebase] SDK inicializado.');
         return true;
-    } catch(e) {
-        console.error('[firebase] Falha ao inicializar:', e);
-        _listeners.forEach(fn => fn(false));
+    } catch (e) {
+        console.error('[firebase] Erro ao inicializar SDK:', e);
         return false;
     }
 }
 
-async function _ensureAuth() {
-    return new Promise((resolve, reject) => {
-        const unsub = _auth.onAuthStateChanged(async user => {
+/**
+ * Verifica se já existe sessão ativa.
+ * Retorna o user se logado, null se não logado.
+ */
+export function fbGetCurrentUser() {
+    return new Promise(resolve => {
+        if (!_auth) { resolve(null); return; }
+        // onAuthStateChanged dispara imediatamente com o estado atual
+        const unsub = _auth.onAuthStateChanged(user => {
             unsub();
             if (user) {
-                _uid = user.uid; resolve(user);
-            } else {
-                try {
-                    const cred = await _auth.signInAnonymously();
-                    _uid = cred.user.uid; resolve(cred.user);
-                } catch(e) { reject(e); }
+                _uid   = user.uid;
+                _user  = user;
+                _ready = true;
             }
+            resolve(user || null);
         });
     });
 }
 
-export function onFirebaseReady(callback) { _listeners.push(callback); }
+/**
+ * Abre popup de login com Google.
+ * Retorna o user em caso de sucesso, lança erro em caso de falha.
+ */
+export async function fbSignInGoogle() {
+    if (!_auth) throw new Error('Firebase não inicializado');
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const cred = await _auth.signInWithPopup(provider);
+    _uid   = cred.user.uid;
+    _user  = cred.user;
+    _ready = true;
+    _readyListeners.forEach(fn => fn(_user));
+    console.info(`[firebase] Login Google. UID: ${_uid}`);
+    return cred.user;
+}
 
-// ── Coleção: users/{uid}/{colecao}/{id} ──────────────────────────
+/**
+ * Faz logout. Limpa estado local.
+ */
+export async function fbSignOut() {
+    if (!_auth) return;
+    await _auth.signOut();
+    _uid   = null;
+    _user  = null;
+    _ready = false;
+    console.info('[firebase] Logout realizado.');
+}
+
+export function onFirebaseReady(callback) { _readyListeners.push(callback); }
+
+// ── CRUD Firestore ─────────────────────────────────────────────────
+// Estrutura: users/{uid}/{colecao}/{id}
 
 function _colRef(colecao) {
     return _db.collection('users').doc(_uid).collection(colecao);
