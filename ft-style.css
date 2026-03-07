@@ -677,3 +677,147 @@ body.theme-arctic ::-webkit-scrollbar-thumb, body.light-mode ::-webkit-scrollbar
   #ft-nav, #ft-fab, #ft-hdr, #ft-toast, #ft-loading { display:none !important; }
   .ft-section { display:block !important; padding:0 !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   LOGIN GOOGLE — v3.1
+   ══════════════════════════════════════════════════════════════════ */
+
+#ft-login {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ft-bg);
+    z-index: 9999;
+    padding: 24px;
+    padding-top: max(24px, env(safe-area-inset-top));
+}
+#ft-login.hidden { display: none !important; }
+
+.ft-login-box {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+}
+
+.ft-login-logo {
+    font-size: 64px;
+    line-height: 1;
+    animation: ft-login-bounce 2s ease-in-out infinite;
+}
+@keyframes ft-login-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-8px); }
+}
+
+.ft-login-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--ft-txt);
+    margin: 0;
+}
+
+.ft-login-sub {
+    font-size: 15px;
+    color: var(--ft-txt2);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.ft-login-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    color: #1f1f1f;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,.18);
+    transition: transform .15s, box-shadow .15s, opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+    margin-top: 8px;
+}
+.ft-login-btn:active {
+    transform: scale(.97);
+    box-shadow: 0 1px 6px rgba(0,0,0,.12);
+}
+.ft-login-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.ft-google-ico {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.ft-login-hint {
+    font-size: 13px;
+    color: var(--ft-txt3, var(--ft-txt2));
+    line-height: 1.5;
+    margin: 0;
+}
+
+.ft-login-erro {
+    background: rgba(255, 69, 58, .15);
+    border: 1px solid rgba(255, 69, 58, .35);
+    color: #ff453a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Avatar no header */
+.ft-user-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity .15s;
+}
+.ft-user-btn:active { opacity: .7; }
+
+.ft-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--ft-acc);
+    display: block;
+}
+
+.ft-avatar-ini {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--ft-acc);
+    color: #000;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--ft-acc);
+}
