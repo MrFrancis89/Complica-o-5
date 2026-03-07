@@ -1,5 +1,21 @@
-// ft-app.js — v3.1 — Google Sign-In
+// ft-app.js — v3.2 — Google Sign-In
+// ══════════════════════════════════════════════════════════════════
+// CORREÇÕES v3.2
+// ══════════════════════════════════════════════════════════════════
+// BUG #1 — iOS/Safari: popup bloqueado → tela branca no Firebase
+//   PROBLEMA : signInWithPopup falha em iOS/Safari (WKWebView + PWA).
+//              Sem fallback, o usuário via a tela branca com
+//              "The requested action is invalid".
+//   CORREÇÃO A: No boot (init()), fbGetRedirectResult() é chamado ANTES
+//               de fbGetCurrentUser(). Captura qualquer login de redirect
+//               pendente e inicia o app. Se o token expirou, retorna null
+//               e o app exibe a tela de login normalmente.
+//   CORREÇÃO B: No handler do botão de login, ao capturar
+//               auth/popup-blocked ou auth/operation-not-supported-in-this-environment,
+//               chama fbSignInWithRedirect() como fallback automático.
+// ══════════════════════════════════════════════════════════════════
 import { initFirebase, fbGetCurrentUser, fbSignInGoogle,
+         fbSignInWithRedirect, fbGetRedirectResult,
          fbSignOut, fbIsAvailable, fbGetUser }             from './ft-firebase.js';
 import { sincronizarLocalParaFirebase }                    from './ft-storage.js';
 import { initModalOverlay, setLoading, toast, debounce }  from './ft-ui.js';
@@ -65,10 +81,26 @@ function _mostrarLogin(erro = '') {
             await _initApp();
         } catch (e) {
             console.error('[login]', e);
+
+            // BUG FIX #1B — iOS/Safari/PWA bloqueia popups.
+            // Fallback automático para signInWithRedirect.
+            if (
+                e.code === 'auth/popup-blocked' ||
+                e.code === 'auth/operation-not-supported-in-this-environment'
+            ) {
+                try {
+                    if (btn) btn.querySelector('span').textContent = 'Redirecionando…';
+                    await fbSignInWithRedirect();
+                    // Execução não continua — o browser redirecionou.
+                } catch (e2) {
+                    console.error('[login] redirect falhou:', e2);
+                    _mostrarLogin('Falha ao redirecionar. Tente novamente.');
+                }
+                return;
+            }
+
             const msg = e.code === 'auth/popup-closed-by-user'
                 ? 'Login cancelado.'
-                : e.code === 'auth/popup-blocked'
-                ? 'Popup bloqueado. Permita popups para este site.'
                 : 'Falha ao entrar. Tente novamente.';
             _mostrarLogin(msg);
         }
@@ -140,7 +172,17 @@ async function init() {
         return;
     }
 
-    // Verifica sessão existente
+    // BUG FIX #1A — Verifica redirect pendente ANTES da sessão normal.
+    // Cobre o retorno do signInWithRedirect (iOS/Safari) e descarta
+    // tokens expirados sem travar o app.
+    const redirectUser = await fbGetRedirectResult();
+    if (redirectUser) {
+        document.getElementById('ft-login')?.classList.add('hidden');
+        await _initApp();
+        return;
+    }
+
+    // Verifica sessão existente (ex: usuário já logado anteriormente)
     const user = await fbGetCurrentUser();
     setLoading(false);
 
